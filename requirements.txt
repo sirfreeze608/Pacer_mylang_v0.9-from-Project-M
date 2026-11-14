@@ -1,0 +1,24 @@
+# Pacer + mylang — Python dependencies
+# Generated for: pip install -r requirements.txt
+#
+# Runtime dependencies — required to run Pacer_mylang.pyw
+PyQt5==5.15.11
+anthropic==0.40.0
+
+# Optional runtime — enables AES-256-GCM inside crypto.encrypt_aes().
+# Without it, mylang falls back to an authenticated SHA-256 CTR + HMAC
+# construction, which is secure but not hardware-accelerated.
+cryptography>=44,<47
+
+# Build dependency — only required when packaging via build_exe.ps1 / PyInstaller
+pyinstaller==6.21.0
+pyinstaller-hooks-contrib>=2025.0
+
+# ── Notes ──────────────────────────────────────────────────────────────────
+# Everything inside mylang/ (lexer.py, parser.py, interpreter.py, stdlib.py,
+# main.py) uses only the Python standard library — hashlib, hmac, cmath,
+# statistics, dataclasses, enum, json, io, os, re, sys, datetime, shutil,
+# traceback, textwrap, pathlib, base64, tempfile, codecs, urllib.
+# No additional packages are required for the language engine itself; only the
+# editor (PyQt5), AI assistant (anthropic), and optional AES backend
+# (cryptography) need third-party installs.

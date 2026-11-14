@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  PayloadFiles.wxs  —  WiX v5 Fragment for wildcard file harvesting
+  This MUST be a separate file from Pacer.wxs.
+  WiX v5 compiles each .wxs file independently; a <Fragment> in the same
+  file as a <Package> still produces two entry sections (WIX0089).
+  Splitting into separate files gives each its own compilation unit.
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+
+  <Fragment>
+    <!--
+      Harvests everything under installer\payload\ automatically.
+      build_msi.ps1 populates payload\ with:
+        Pacer.exe, MYLANG_DOCS.md, COMMANDS.md, README.md, CHANGELOG.md,
+        SECURITY.md, RELEASE_NOTES.md, mylang-vscode\**
+      All files land in INSTALLFOLDER (defined in Pacer.wxs).
+    -->
+    <ComponentGroup Id="PayloadFiles" Directory="INSTALLFOLDER">
+      <Files Include="payload\**" />
+    </ComponentGroup>
+  </Fragment>
+
+</Wix>

@@ -1,0 +1,22 @@
+<Project Sdk="WixToolset.Sdk/5.0.2">
+
+  <!--
+    NOTE: WiX SDK-style projects automatically include every *.wxs file
+    in this folder (default Compile glob). Do NOT add explicit
+    <Compile Include="..."/> items — that compiles each file TWICE and
+    causes:  error WIX0089 "Multiple entry sections"
+             warning WIX8602 "Skipping file that has already been harvested"
+  -->
+
+  <PropertyGroup>
+    <OutputType>Package</OutputType>
+    <OutputName>Pacer-Setup</OutputName>
+    <Platform>x64</Platform>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- UI extension provides the WixUI_InstallDir wizard theme -->
+    <PackageReference Include="WixToolset.UI.wixext" Version="5.0.2" />
+  </ItemGroup>
+
+</Project>

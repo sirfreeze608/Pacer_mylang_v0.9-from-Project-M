@@ -1,0 +1,95 @@
+# build_exe.ps1
+# Packages Pacer + mylang into a standalone Windows executable using PyInstaller.
+# Run from the project root (where Pacer_mylang.pyw and requirements.txt live).
+#
+# Usage:
+#   .\build_exe.ps1
+
+# Exit script on first error
+$ErrorActionPreference = "Stop"
+
+# Define variables
+$EntryPoint = "Pacer_mylang.pyw"  # .pyw = no console window (pythonw.exe subsystem)
+$AppName    = "Pacer"             # Desired name of your final executable (.exe)
+
+# Remove any leftover venv from a previous failed run before starting fresh
+if (Test-Path "venv_build") {
+    Write-Host "Removing leftover venv_build from a previous run..." -ForegroundColor Yellow
+    Remove-Item -Recurse -Force .\venv_build
+}
+
+# Remove any leftover .spec file, dist/, or build/ from a previous run.
+# PyInstaller reuses an existing .spec file's baked-in paths if one is present,
+# which silently overrides the --add-data flags below — so a stale .spec from
+# an earlier failed attempt can break later builds even after a clean venv.
+foreach ($leftover in @(".\dist", ".\build", ".\$AppName.spec")) {
+    if (Test-Path $leftover) {
+        Write-Host "Removing leftover build artifact: $leftover" -ForegroundColor Yellow
+        Remove-Item -Recurse -Force $leftover
+    }
+}
+
+Write-Host "Creating clean virtual environment..." -ForegroundColor Cyan
+python -m venv venv_build
+if ($LASTEXITCODE -ne 0) { throw "Failed to create virtual environment." }
+.\venv_build\Scripts\Activate.ps1
+
+Write-Host "Upgrading pip and installing project dependencies..." -ForegroundColor Cyan
+python -m pip install --upgrade pip
+if ($LASTEXITCODE -ne 0) { throw "Failed to upgrade pip." }
+
+if (Test-Path "requirements.txt") {
+    pip install -r requirements.txt
+    if ($LASTEXITCODE -ne 0) { throw "pip install -r requirements.txt failed. See errors above." }
+} else {
+    Write-Host "Warning: requirements.txt not found. Installing only PyInstaller." -ForegroundColor Yellow
+    pip install pyinstaller
+    if ($LASTEXITCODE -ne 0) { throw "Failed to install PyInstaller." }
+}
+
+Write-Host "Building standalone Windows executable..." -ForegroundColor Cyan
+
+# Pre-flight check: confirm every --add-data source actually exists before
+# invoking PyInstaller, so failures are reported clearly up front instead of
+# surfacing as a cryptic "Unable to find ... when adding binary and data files."
+$requiredPaths = @("mylang", "MYLANG_DOCS.md", "COMMANDS.md", $EntryPoint)
+foreach ($p in $requiredPaths) {
+    if (-not (Test-Path $p)) {
+        throw "Required file/folder not found: $p (expected in $(Get-Location))"
+    }
+}
+
+# Optional documentation: bundled when present so the exe ships the same
+# reference set as the source archive. pacer_logo.png is optional — the app
+# falls back to a built-in icon when it is absent.
+$optionalDocs = @("CHANGELOG.md", "SECURITY.md", "RELEASE_NOTES.md", "README.md")
+$addDataArgs = @()
+foreach ($doc in $optionalDocs) {
+    if (Test-Path $doc) { $addDataArgs += @("--add-data", "$doc;.") }
+}
+if (Test-Path "pacer_logo.png") { $addDataArgs += @("--add-data", "pacer_logo.png;.") }
+
+# --onefile:     Bundles everything into a single .exe
+# --name:        Names the output file
+# --clean:       Cleans PyInstaller cache before building
+# --noconsole:   Suppress the console window. The .pyw extension already
+#                signals this to PyInstaller (sets Windows subsystem to GUI),
+#                but --noconsole is kept here as an explicit guarantee.
+# --add-data:    Bundle the mylang/ engine and docs alongside the exe
+#                (Windows uses ';' as the source;dest separator)
+pyinstaller --onefile --name="$AppName" --clean --noconsole `
+    --add-data "mylang;mylang" `
+    --add-data "MYLANG_DOCS.md;." `
+    --add-data "COMMANDS.md;." `
+    @addDataArgs `
+    "$EntryPoint"
+if ($LASTEXITCODE -ne 0) { throw "PyInstaller build failed. See errors above." }
+
+Write-Host "Cleaning up virtual environment and build folders..." -ForegroundColor Cyan
+deactivate
+Remove-Item -Recurse -Force .\venv_build
+Remove-Item -Recurse -Force .\build
+Remove-Item -Force ".\$AppName.spec"
+
+Write-Host "SUCCESS! Your executable is available in the 'dist' directory." -ForegroundColor Green
+Get-ChildItem .\dist\
